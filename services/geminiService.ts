@@ -30,9 +30,12 @@ export const streamGeminiResponse = async (
     }));
 
     // Inject current project context into the latest message implicitly or as system context
+    // Added "País: Angola" to force the model to stick to the correct geographical and legal context
     const contextString = `
-      [CONTEXTO ATUAL DO PROJETO]
-      Localização: ${context.location || "Não especificado"}
+      [CONTEXTO DO PROJETO - ANGOLA]
+      País: Angola
+      Moeda Preferencial: Kwanza (AOA)
+      Localização: ${context.location || "Não especificado (Assumir Luanda/Angola)"}
       Tipo de Projeto: ${context.projectType || "Não especificado"}
       Teto Orçamentário: ${context.budgetCap || "Não especificado"}
     `;
@@ -67,6 +70,6 @@ export const streamGeminiResponse = async (
 
   } catch (error) {
     console.error("Gemini API Error:", error);
-    onComplete("⚠️ Ocorreu um erro de conexão com o sistema ArchTec. Por favor, verifique sua chave de API ou tente novamente.");
+    onComplete("⚠️ Ocorreu um erro de conexão com o sistema ArchTec Angola. Por favor, verifique sua chave de API ou tente novamente.");
   }
 };
