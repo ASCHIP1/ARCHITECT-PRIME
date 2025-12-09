@@ -2,6 +2,14 @@ import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { SYSTEM_PROMPT } from "../constants";
 import { Message, ProjectContext } from "../types";
 
+// Fix for TS2580: Declare process to satisfy TypeScript compiler
+// The actual value is replaced by Vite at build time via the define config
+declare const process: {
+  env: {
+    API_KEY: string;
+  }
+};
+
 // The API key is injected at build time via vite.config.ts define
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || "" });
 
