@@ -6,12 +6,13 @@ import VisualizationPanel from './components/VisualizationPanel';
 import { streamGeminiResponse } from './services/geminiService';
 import { extractVisualizationData, cleanResponseText } from './utils/parser';
 import { generatePDFReport } from './utils/pdfGenerator';
-import { Send, Loader2 } from 'lucide-react';
+import { Send, Loader2, Menu, PieChart, X } from 'lucide-react';
 
 const INITIAL_CONTEXT: ProjectContext = {
   location: '',
   budgetCap: '',
-  projectType: ''
+  projectType: '',
+  inflationMargin: '20' // Default 20% margin for Angola context
 };
 
 export default function App() {
@@ -19,7 +20,7 @@ export default function App() {
     {
       id: 'welcome',
       role: 'model',
-      content: 'ArchTec-Integrator Prime online. \n\nEstou pronto para atuar como seu parceiro estratégico. Por favor, defina os parâmetros iniciais do projeto na barra lateral ou descreva sua demanda para iniciarmos a análise integrada de Arquitetura, Custos e Cronograma.',
+      content: 'ArchTec-Integrator Prime online. \n\nEstou pronto para atuar como seu parceiro estratégico em Angola. Devido à volatilidade econômica atual, incluí um parâmetro de "Margem de Inflação" na barra lateral. \n\nPor favor, defina o escopo do projeto.',
       timestamp: Date.now()
     }
   ]);
@@ -28,6 +29,10 @@ export default function App() {
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [projectContext, setProjectContext] = useState<ProjectContext>(INITIAL_CONTEXT);
   const [visualization, setVisualization] = useState<VisualizationPayload | null>(null);
+  
+  // UI States for Mobile
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isMobileVizOpen, setIsMobileVizOpen] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -39,6 +44,13 @@ export default function App() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // Open visualization automatically on mobile when new data arrives
+  useEffect(() => {
+    if (visualization && window.innerWidth < 1280) { // xl breakpoint
+      setIsMobileVizOpen(true);
+    }
+  }, [visualization]);
 
   const handleSendMessage = async () => {
     if (!input.trim() || isLoading) return;
@@ -53,6 +65,8 @@ export default function App() {
     setMessages(prev => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
+    // Close sidebar on mobile when sending
+    setIsSidebarOpen(false);
 
     const botMessageId = (Date.now() + 1).toString();
     // Placeholder for streaming
@@ -87,7 +101,7 @@ export default function App() {
             : msg
         ));
         setIsLoading(false);
-        // Focus back on input after response
+        // Focus back on input after response (small delay for mobile keyboard handling)
         setTimeout(() => inputRef.current?.focus(), 100);
       }
     );
@@ -99,10 +113,8 @@ export default function App() {
     const msgIndex = messages.findIndex(m => m.id === id);
     if (msgIndex === -1) return;
 
-    // Remove this message and everything after it
     const previousHistory = messages.slice(0, msgIndex);
 
-    // Create updated user message
     const updatedUserMessage: Message = {
       ...messages[msgIndex],
       content: newContent,
@@ -111,7 +123,6 @@ export default function App() {
 
     const newMessages = [...previousHistory, updatedUserMessage];
     
-    // Prepare bot placeholder
     const botMessageId = (Date.now() + 1).toString();
     const botPlaceholder: Message = {
       id: botMessageId,
@@ -120,11 +131,9 @@ export default function App() {
       timestamp: Date.now()
     };
 
-    // Update state immediately to show new conversation path
     setMessages([...newMessages, botPlaceholder]);
     setIsLoading(true);
 
-    // Re-trigger API with new history
     await streamGeminiResponse(
       newMessages,
       projectContext,
@@ -173,35 +182,71 @@ export default function App() {
   };
 
   const handleNewChat = () => {
-    if (window.confirm("Tem certeza que deseja iniciar um novo chat? O histórico e os parâmetros do projeto serão apagados.")) {
+    if (window.confirm("Tem certeza que deseja iniciar um novo chat?")) {
       setMessages([
         {
           id: 'welcome-' + Date.now(),
           role: 'model',
-          content: 'ArchTec-Integrator Prime online. \n\nNovo chat iniciado. Parâmetros resetados. Estou pronto para atuar como seu parceiro estratégico em um novo projeto.',
+          content: 'ArchTec-Integrator Prime online. \n\nNovo chat iniciado. Parâmetros resetados.',
           timestamp: Date.now()
         }
       ]);
       setProjectContext(INITIAL_CONTEXT);
       setVisualization(null);
       setInput('');
+      setIsMobileVizOpen(false);
       setTimeout(() => inputRef.current?.focus(), 100);
     }
   };
 
   return (
     <div className="flex h-screen bg-arch-900 text-gray-100 font-sans overflow-hidden">
-      {/* Left Sidebar */}
-      <Sidebar 
-        context={projectContext} 
-        setContext={setProjectContext} 
-        onExport={handleExport}
-        onNewChat={handleNewChat}
-        isGeneratingPdf={isGeneratingPdf}
+      
+      {/* Mobile Sidebar Overlay (Drawer) */}
+      <div 
+        className={`fixed inset-0 bg-black/80 z-40 transition-opacity duration-300 md:hidden ${isSidebarOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+        onClick={() => setIsSidebarOpen(false)}
       />
+      
+      {/* Sidebar Container */}
+      <div className={`fixed inset-y-0 left-0 z-50 w-[85%] max-w-[320px] transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0 md:w-auto md:max-w-none ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <Sidebar 
+          context={projectContext} 
+          setContext={setProjectContext} 
+          onExport={handleExport}
+          onNewChat={handleNewChat}
+          isGeneratingPdf={isGeneratingPdf}
+          onClose={() => setIsSidebarOpen(false)}
+        />
+      </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col relative min-w-0">
+      <div className="flex-1 flex flex-col relative min-w-0 w-full">
+        
+        {/* Mobile Header */}
+        <header className="md:hidden h-14 bg-arch-900 border-b border-arch-700 flex items-center justify-between px-4 sticky top-0 z-30 shrink-0">
+          <button 
+            onClick={() => setIsSidebarOpen(true)}
+            className="p-2 -ml-2 text-arch-500 hover:text-white"
+          >
+            <Menu className="w-6 h-6" />
+          </button>
+          
+          <span className="font-bold text-gray-200 tracking-tight">ARCHTEC ANGOLA</span>
+
+          <div className="w-10 flex justify-end">
+            {visualization && (
+              <button 
+                onClick={() => setIsMobileVizOpen(true)}
+                className="p-2 -mr-2 text-arch-accent animate-pulse"
+                title="Ver Gráfico"
+              >
+                <PieChart className="w-6 h-6" />
+              </button>
+            )}
+          </div>
+        </header>
+
         {/* Chat Area */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-8 scroll-smooth">
           <div className="max-w-4xl mx-auto space-y-6 pb-4">
@@ -223,7 +268,7 @@ export default function App() {
         </div>
 
         {/* Input Area */}
-        <div className="p-4 bg-arch-900 border-t border-arch-700">
+        <div className="p-3 sm:p-4 bg-arch-900 border-t border-arch-700 shrink-0">
           <div className="max-w-4xl mx-auto relative">
             <input
               ref={inputRef}
@@ -231,19 +276,20 @@ export default function App() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Descreva sua demanda arquitetônica, questão de custo ou desafio de gestão..."
+              placeholder="Descreva sua demanda..."
               disabled={isLoading}
-              className="w-full bg-arch-800 border border-arch-600 text-white rounded-lg pl-4 pr-12 py-4 shadow-lg focus:outline-none focus:border-arch-accent transition-all placeholder-arch-500 disabled:opacity-50"
+              // text-base prevents iOS zooming on focus
+              className="w-full bg-arch-800 border border-arch-600 text-white rounded-lg pl-4 pr-12 py-3 sm:py-4 shadow-lg focus:outline-none focus:border-arch-accent transition-all placeholder-arch-500 disabled:opacity-50 text-base"
             />
             <button
               onClick={handleSendMessage}
               disabled={!input.trim() || isLoading}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-arch-accent hover:text-white disabled:text-arch-600 transition-colors"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-arch-accent hover:text-white disabled:text-arch-600 transition-colors"
             >
               {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
             </button>
           </div>
-          <div className="max-w-4xl mx-auto mt-2 text-center">
+          <div className="max-w-4xl mx-auto mt-2 text-center hidden sm:block">
              <p className="text-[10px] text-arch-600">
                ArchTec pode cometer erros. Verifique informações críticas com profissionais licenciados.
              </p>
@@ -251,10 +297,39 @@ export default function App() {
         </div>
       </div>
 
-      {/* Right Visualization Panel (Responsive: Hidden on small screens or toggleable - sticking to fixed width for desktop for now) */}
-      <div className="w-96 hidden xl:block border-l border-arch-700 bg-arch-800 h-full">
+      {/* Desktop Visualization Panel */}
+      <div className="w-96 hidden xl:block border-l border-arch-700 bg-arch-800 h-full shrink-0">
         <VisualizationPanel data={visualization} />
       </div>
+
+      {/* Mobile Visualization Modal */}
+      {isMobileVizOpen && visualization && (
+        <div className="fixed inset-0 z-50 xl:hidden flex items-center justify-center bg-black/90 p-4">
+          <div className="bg-arch-800 w-full max-w-lg rounded-lg border border-arch-600 shadow-2xl flex flex-col max-h-[80vh]">
+            <div className="flex items-center justify-between p-4 border-b border-arch-700">
+              <h3 className="font-bold text-white">Visualização de Dados</h3>
+              <button 
+                onClick={() => setIsMobileVizOpen(false)}
+                className="p-1 text-gray-400 hover:text-white"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto min-h-[300px]">
+              <VisualizationPanel data={visualization} />
+            </div>
+            <div className="p-4 border-t border-arch-700 text-center">
+               <button 
+                 onClick={() => setIsMobileVizOpen(false)}
+                 className="text-sm text-arch-accent hover:underline"
+               >
+                 Voltar para o Chat
+               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

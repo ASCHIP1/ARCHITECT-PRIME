@@ -30,4 +30,5 @@ export interface ProjectContext {
   location: string;
   budgetCap: string;
   projectType: string;
+  inflationMargin: string; // New field for inflation/risk margin
 }

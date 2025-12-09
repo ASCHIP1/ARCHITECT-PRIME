@@ -121,17 +121,27 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = ({ data }) => {
   return (
     <div className="h-full flex flex-col bg-arch-800 border-l border-arch-700">
       <div className="p-4 border-b border-arch-700 flex items-center space-x-2 bg-arch-900/30">
-        <div className="text-arch-accent">
+        <div className="text-arch-accent p-1.5 bg-arch-800 rounded border border-arch-700 shadow-sm">
           {getIcon()}
         </div>
-        <h2 className="font-semibold text-gray-100">{data.title}</h2>
+        <div className="flex items-center gap-3">
+          <h2 className="text-lg font-bold tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-white via-gray-200 to-gray-400 uppercase drop-shadow-sm">
+            {data.title}
+          </h2>
+          {data.currency && (
+            <span className="text-[10px] font-mono font-bold bg-arch-accent/10 text-arch-accent px-2 py-0.5 rounded border border-arch-accent/20 whitespace-nowrap shadow-[0_0_10px_rgba(14,165,233,0.1)]">
+              {data.currency}
+            </span>
+          )}
+        </div>
       </div>
       {/* Added ID for PDF export capture */}
       <div id="visualization-export-container" className="flex-1 p-4 min-h-[300px] bg-arch-800">
         {renderChart()}
       </div>
-      <div className="p-4 border-t border-arch-700 text-xs text-arch-500 font-mono">
-        DATA SOURCE: ARCHTEC INTELLIGENCE ENGINE
+      <div className="p-4 border-t border-arch-700 text-xs text-arch-500 font-mono flex justify-between items-center">
+        <span>DATA SOURCE: ARCHTEC INTELLIGENCE ENGINE</span>
+        <div className="w-2 h-2 rounded-full bg-arch-success animate-pulse"></div>
       </div>
     </div>
   );

@@ -56,7 +56,8 @@ export const generatePDFReport = async (
   const contextData = [
     `Localização: ${context.location || "N/A"}`,
     `Tipologia: ${context.projectType || "N/A"}`,
-    `Budget Cap: ${context.budgetCap || "N/A"}`
+    `Budget Cap: ${context.budgetCap || "N/A"}`,
+    `Risco/Inflação Considerada: ${context.inflationMargin ? context.inflationMargin + "%" : "N/A"}`
   ];
 
   contextData.forEach((line) => {

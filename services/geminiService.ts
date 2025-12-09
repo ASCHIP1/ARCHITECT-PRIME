@@ -38,6 +38,7 @@ export const streamGeminiResponse = async (
       Localização: ${context.location || "Não especificado (Assumir Luanda/Angola)"}
       Tipo de Projeto: ${context.projectType || "Não especificado"}
       Teto Orçamentário: ${context.budgetCap || "Não especificado"}
+      MARGEM DE RISCO/INFLAÇÃO DEFINIDA PELO USUÁRIO: ${context.inflationMargin || "0"}% (CRÍTICO: APLICAR ESTA MARGEM EM CUSTOS E CONTINGÊNCIAS)
     `;
 
     const chat = ai.chats.create({
